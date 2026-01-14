@@ -57,6 +57,8 @@ Options:
   --clean                     Remove output directory first
   -q, --quiet                 Suppress output
   -f, --filesystem-only       Skip importlib, use only filesystem resolution
+  --format                    Format extracted files (default: ruff format)
+  --formatter CMD             Custom formatter command (implies --format)
   --version                   Show version
   -h, --help                  Show help
 ```
@@ -76,6 +78,8 @@ output_package = "extracted_models"
 output_dir = "./dist/extracted_models"
 clean = true
 # filesystem_only = true  # Enable for uninstallable projects
+# format = true           # Format extracted files
+# formatter = "ruff format"  # Custom formatter command
 ```
 
 Then just run:
@@ -145,6 +149,23 @@ pydistill \
 ```
 
 This skips Python's `importlib` and resolves modules purely via filesystem search in the specified source roots.
+
+## Formatting Extracted Code
+
+The AST-based import rewriting can produce code that's not perfectly formatted. Use `--format` to automatically format extracted files:
+
+```bash
+# Use ruff (default)
+pydistill -e myapp:Model -b myapp -p out -o ./dist --format
+
+# Use black instead
+pydistill ... --format --formatter black
+
+# Custom ruff config
+pydistill ... --format --formatter "ruff format --line-length 120"
+```
+
+Formatting failures are non-fatal—extraction will succeed even if the formatter is unavailable.
 
 ## How It Works
 

@@ -126,6 +126,18 @@ Configuration file (pydistill.toml):
         "Useful for extracting from projects that cannot be installed.",
     )
 
+    parser.add_argument(
+        "--format",
+        action="store_true",
+        help="Format extracted files using a code formatter (default: ruff format)",
+    )
+
+    parser.add_argument(
+        "--formatter",
+        metavar="CMD",
+        help="Formatter command to use (default: 'ruff format'). Implies --format.",
+    )
+
     return parser
 
 
@@ -140,6 +152,9 @@ def load_config(args: argparse.Namespace) -> PyDistillConfig:
     else:
         file_config = PyDistillConfig.find_and_load()
 
+    # --formatter implies --format
+    format_enabled = args.format or args.formatter is not None
+
     # Start with file config or empty config
     if file_config:
         config = file_config.merge_with_args(
@@ -150,6 +165,8 @@ def load_config(args: argparse.Namespace) -> PyDistillConfig:
             source_roots=args.source_roots,
             clean=args.clean if args.clean else None,
             filesystem_only=args.filesystem_only if args.filesystem_only else None,
+            format=format_enabled if format_enabled else None,
+            formatter=args.formatter,
         )
     else:
         config = PyDistillConfig(
@@ -160,6 +177,8 @@ def load_config(args: argparse.Namespace) -> PyDistillConfig:
             source_roots=args.source_roots or [],
             clean=args.clean,
             filesystem_only=args.filesystem_only,
+            format=format_enabled,
+            formatter=args.formatter or "ruff format",
         )
 
     return config
@@ -224,6 +243,8 @@ def main(argv: list[str] | None = None) -> int:
         clean=config.clean,
         quiet=args.quiet,
         filesystem_only=config.filesystem_only,
+        format=config.format,
+        formatter=config.formatter,
     )
 
     result = extractor.extract(entry_points)

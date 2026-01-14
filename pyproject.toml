@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Extract Python models and dependencies into standalone packages"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "pydantic[email]>=2.12.5",
+]
 
 [project.scripts]
 pydistill = "pydistill.cli:main"
@@ -20,4 +22,5 @@ packages = ["src/pydistill"]
 dev = [
     "pydantic>=2.0",
     "pytest>=8.0",
+    "ruff>=0.14.11",
 ]

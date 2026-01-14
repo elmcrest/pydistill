@@ -20,6 +20,8 @@ class PyDistillConfig:
     source_roots: list[Path] = field(default_factory=list)
     clean: bool = False
     filesystem_only: bool = False
+    format: bool = False
+    formatter: str = "ruff format"
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> PyDistillConfig:
@@ -37,6 +39,8 @@ class PyDistillConfig:
             source_roots=source_roots,
             clean=pydistill_data.get("clean", False),
             filesystem_only=pydistill_data.get("filesystem_only", False),
+            format=pydistill_data.get("format", False),
+            formatter=pydistill_data.get("formatter", "ruff format"),
         )
 
     @classmethod
@@ -75,6 +79,8 @@ class PyDistillConfig:
         source_roots: list[Path] | None = None,
         clean: bool | None = None,
         filesystem_only: bool | None = None,
+        format: bool | None = None,
+        formatter: str | None = None,
     ) -> PyDistillConfig:
         """Merge CLI arguments with config file (CLI takes precedence)."""
         return PyDistillConfig(
@@ -85,4 +91,6 @@ class PyDistillConfig:
             source_roots=source_roots if source_roots else self.source_roots,
             clean=clean if clean is not None else self.clean,
             filesystem_only=filesystem_only if filesystem_only is not None else self.filesystem_only,
+            format=format if format is not None else self.format,
+            formatter=formatter if formatter else self.formatter,
         )

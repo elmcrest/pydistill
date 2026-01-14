@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import shlex
 import shutil
+import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -25,6 +27,8 @@ class ModuleExtractor:
     clean: bool = False
     quiet: bool = False
     filesystem_only: bool = False
+    format: bool = False
+    formatter: str = "ruff format"
     output: TextIO = field(default_factory=lambda: sys.stdout)
 
     # Internal state
@@ -46,6 +50,21 @@ class ModuleExtractor:
 
     def _warn(self, message: str) -> None:
         print(f"Warning: {message}", file=sys.stderr)
+
+    def _format_file(self, file_path: Path) -> bool:
+        """Format a single file using the configured formatter. Returns True on success."""
+        try:
+            cmd = [*shlex.split(self.formatter), str(file_path)]
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            return result.returncode == 0
+        except (OSError, subprocess.SubprocessError) as e:
+            self._warn(f"Failed to format {file_path}: {e}")
+            return False
 
     def get_relative_path(self, module_name: str) -> Path:
         """Get the relative path for a module within the output package."""
@@ -164,6 +183,17 @@ class ModuleExtractor:
                 init_path.write_text('"""Auto-generated subpackage."""\n')
                 result.files_written.append(init_path)
                 self._log(f"  Created: {init_path}")
+
+        # Format files if requested
+        if self.format:
+            self._log(f"\nFormatting with: {self.formatter}")
+            format_failures = 0
+            for file_path in result.files_written:
+                if file_path.suffix == ".py":
+                    if not self._format_file(file_path):
+                        format_failures += 1
+            if format_failures > 0:
+                self._warn(f"Failed to format {format_failures} file(s)")
 
         self._log(f"\nExtraction complete! Output written to: {self.output_dir}")
 

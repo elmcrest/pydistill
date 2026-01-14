@@ -102,6 +102,59 @@ class TestCreateParser:
         )
         assert args.filesystem_only is True
 
+    def test_parse_format(self):
+        parser = create_parser()
+        args = parser.parse_args(
+            [
+                "-e",
+                "myapp:User",
+                "-b",
+                "myapp",
+                "-p",
+                "out",
+                "-o",
+                "./dist",
+                "--format",
+            ]
+        )
+        assert args.format is True
+
+    def test_parse_formatter(self):
+        parser = create_parser()
+        args = parser.parse_args(
+            [
+                "-e",
+                "myapp:User",
+                "-b",
+                "myapp",
+                "-p",
+                "out",
+                "-o",
+                "./dist",
+                "--formatter",
+                "black",
+            ]
+        )
+        assert args.formatter == "black"
+
+    def test_parse_formatter_with_options(self):
+        parser = create_parser()
+        args = parser.parse_args(
+            [
+                "-e",
+                "myapp:User",
+                "-b",
+                "myapp",
+                "-p",
+                "out",
+                "-o",
+                "./dist",
+                "--formatter",
+                "ruff format --line-length 120",
+            ]
+        )
+        assert args.formatter == "ruff format --line-length 120"
+
 
 class TestValidateConfig:
     def test_valid_config(self):

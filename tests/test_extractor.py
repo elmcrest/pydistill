@@ -1,8 +1,11 @@
 """Tests for pydistill.extractor."""
 
+import shutil
 import sys
 from io import StringIO
 from pathlib import Path
+
+import pytest
 
 from pydistill.extractor import ModuleExtractor
 from pydistill.models import EntryPoint
@@ -120,3 +123,64 @@ class TestModuleExtractor:
             assert hasattr(Status, "ACTIVE")
         finally:
             sys.path.remove(str(output_dir.parent))
+
+    @pytest.mark.skipif(
+        shutil.which("ruff") is None,
+        reason="ruff not installed",
+    )
+    def test_format_with_ruff(
+        self, test_project_path: Path, output_dir: Path, add_test_project_to_path
+    ):
+        """Test that --format runs ruff on extracted files."""
+        extractor = ModuleExtractor(
+            base_package="project_a",
+            output_package="extracted",
+            output_dir=output_dir,
+            source_roots=[test_project_path],
+            quiet=True,
+            format=True,
+            formatter="ruff format",
+        )
+
+        entry_points = [EntryPoint.parse("project_a.appointments.models:Appointment")]
+        result = extractor.extract(entry_points)
+
+        assert result.success
+        # Verify files exist and are valid Python
+        models_content = (output_dir / "appointments" / "models.py").read_text()
+        assert "from extracted.common.types import" in models_content
+
+    def test_format_with_unavailable_formatter(
+        self, test_project_path: Path, output_dir: Path, add_test_project_to_path
+    ):
+        """Test that extraction succeeds even if formatter is not available."""
+        extractor = ModuleExtractor(
+            base_package="project_a",
+            output_package="extracted",
+            output_dir=output_dir,
+            source_roots=[test_project_path],
+            quiet=True,
+            format=True,
+            formatter="nonexistent_formatter_xyz",
+        )
+
+        entry_points = [EntryPoint.parse("project_a.appointments.models:Appointment")]
+        result = extractor.extract(entry_points)
+
+        # Should still succeed - formatting failure is non-fatal
+        assert result.success
+        assert (output_dir / "appointments" / "models.py").exists()
+
+    def test_format_disabled_by_default(
+        self, test_project_path: Path, output_dir: Path, add_test_project_to_path
+    ):
+        """Test that formatting is disabled by default."""
+        extractor = ModuleExtractor(
+            base_package="project_a",
+            output_package="extracted",
+            output_dir=output_dir,
+            source_roots=[test_project_path],
+            quiet=True,
+        )
+
+        assert extractor.format is False
