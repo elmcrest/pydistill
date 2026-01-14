@@ -1,4 +1,5 @@
 # pydistill
+[![codecov](https://codecov.io/gh/elmcrest/pydistill/graph/badge.svg?token=hWfKsrCkxK)](https://codecov.io/gh/elmcrest/pydistill)
 
 Extract Python models and their transitive dependencies into standalone, self-contained packages.
 
