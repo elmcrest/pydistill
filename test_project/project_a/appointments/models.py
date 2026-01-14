@@ -1,4 +1,5 @@
 """Appointment models."""
+
 from datetime import datetime
 from typing import Optional, List
 

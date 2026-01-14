@@ -2,7 +2,6 @@
 
 import shutil
 import sys
-from io import StringIO
 from pathlib import Path
 
 import pytest
@@ -13,7 +12,10 @@ from pydistill.models import EntryPoint
 
 class TestModuleExtractor:
     def test_extract_creates_package(
-        self, test_project_path: Path, output_dir: Path, add_test_project_to_path
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+        add_test_project_to_path,
     ):
         extractor = ModuleExtractor(
             base_package="project_a",
@@ -35,7 +37,10 @@ class TestModuleExtractor:
         assert (output_dir / "vehicles" / "models.py").exists()
 
     def test_extract_rewrites_imports(
-        self, test_project_path: Path, output_dir: Path, add_test_project_to_path
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+        add_test_project_to_path,
     ):
         extractor = ModuleExtractor(
             base_package="project_a",
@@ -55,7 +60,10 @@ class TestModuleExtractor:
         assert "from project_a" not in models_content
 
     def test_dry_run_does_not_write(
-        self, test_project_path: Path, output_dir: Path, add_test_project_to_path
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+        add_test_project_to_path,
     ):
         extractor = ModuleExtractor(
             base_package="project_a",
@@ -75,7 +83,10 @@ class TestModuleExtractor:
         assert not output_dir.exists()
 
     def test_clean_removes_existing(
-        self, test_project_path: Path, output_dir: Path, add_test_project_to_path
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+        add_test_project_to_path,
     ):
         # Create some existing content
         output_dir.mkdir(parents=True)
@@ -100,7 +111,10 @@ class TestModuleExtractor:
         assert (output_dir / "appointments" / "models.py").exists()
 
     def test_extracted_package_is_importable(
-        self, test_project_path: Path, output_dir: Path, add_test_project_to_path
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+        add_test_project_to_path,
     ):
         extractor = ModuleExtractor(
             base_package="project_a",
@@ -116,8 +130,8 @@ class TestModuleExtractor:
         # Add output dir parent to sys.path and try importing
         sys.path.insert(0, str(output_dir.parent))
         try:
-            from extracted.appointments.models import Appointment
-            from extracted.common.types import Status
+            from extracted.appointments.models import Appointment  # type: ignore[import-not-found]
+            from extracted.common.types import Status  # type: ignore[import-not-found]
 
             assert hasattr(Appointment, "model_fields")
             assert hasattr(Status, "ACTIVE")
@@ -129,7 +143,10 @@ class TestModuleExtractor:
         reason="ruff not installed",
     )
     def test_format_with_ruff(
-        self, test_project_path: Path, output_dir: Path, add_test_project_to_path
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+        add_test_project_to_path,
     ):
         """Test that --format runs ruff on extracted files."""
         extractor = ModuleExtractor(
@@ -151,7 +168,10 @@ class TestModuleExtractor:
         assert "from extracted.common.types import" in models_content
 
     def test_format_with_unavailable_formatter(
-        self, test_project_path: Path, output_dir: Path, add_test_project_to_path
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+        add_test_project_to_path,
     ):
         """Test that extraction succeeds even if formatter is not available."""
         extractor = ModuleExtractor(
@@ -172,7 +192,10 @@ class TestModuleExtractor:
         assert (output_dir / "appointments" / "models.py").exists()
 
     def test_format_disabled_by_default(
-        self, test_project_path: Path, output_dir: Path, add_test_project_to_path
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+        add_test_project_to_path,
     ):
         """Test that formatting is disabled by default."""
         extractor = ModuleExtractor(

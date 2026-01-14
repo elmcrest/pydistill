@@ -90,7 +90,9 @@ class PyDistillConfig:
             output_dir=output_dir if output_dir else self.output_dir,
             source_roots=source_roots if source_roots else self.source_roots,
             clean=clean if clean is not None else self.clean,
-            filesystem_only=filesystem_only if filesystem_only is not None else self.filesystem_only,
+            filesystem_only=filesystem_only
+            if filesystem_only is not None
+            else self.filesystem_only,
             format=format if format is not None else self.format,
             formatter=formatter if formatter else self.formatter,
         )

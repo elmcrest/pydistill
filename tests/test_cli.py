@@ -2,9 +2,7 @@
 
 from pathlib import Path
 
-import pytest
-
-from pydistill.cli import create_parser, load_config, main, validate_config
+from pydistill.cli import create_parser, main, validate_config
 from pydistill.config import PyDistillConfig
 
 
@@ -27,7 +25,7 @@ class TestCreateParser:
                 "extracted",
                 "-o",
                 "./dist",
-            ]
+            ],
         )
         assert args.entries == ["myapp.models:User", "myapp.models:Order"]
         assert args.base_package == "myapp"
@@ -47,7 +45,7 @@ class TestCreateParser:
                 "-o",
                 "./dist",
                 "--dry-run",
-            ]
+            ],
         )
         assert args.dry_run is True
 
@@ -64,7 +62,7 @@ class TestCreateParser:
                 "-o",
                 "./dist",
                 "--clean",
-            ]
+            ],
         )
         assert args.clean is True
 
@@ -81,7 +79,7 @@ class TestCreateParser:
                 "-o",
                 "./dist",
                 "--filesystem-only",
-            ]
+            ],
         )
         assert args.filesystem_only is True
 
@@ -98,7 +96,7 @@ class TestCreateParser:
                 "-o",
                 "./dist",
                 "-f",
-            ]
+            ],
         )
         assert args.filesystem_only is True
 
@@ -115,7 +113,7 @@ class TestCreateParser:
                 "-o",
                 "./dist",
                 "--format",
-            ]
+            ],
         )
         assert args.format is True
 
@@ -133,7 +131,7 @@ class TestCreateParser:
                 "./dist",
                 "--formatter",
                 "black",
-            ]
+            ],
         )
         assert args.formatter == "black"
 
@@ -151,7 +149,7 @@ class TestCreateParser:
                 "./dist",
                 "--formatter",
                 "ruff format --line-length 120",
-            ]
+            ],
         )
         assert args.formatter == "ruff format --line-length 120"
 
@@ -190,7 +188,10 @@ class TestValidateConfig:
 
 class TestMain:
     def test_main_with_valid_args(
-        self, test_project_path: Path, output_dir: Path, add_test_project_to_path
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+        add_test_project_to_path,
     ):
         result = main(
             [
@@ -205,13 +206,16 @@ class TestMain:
                 "-s",
                 str(test_project_path),
                 "--quiet",
-            ]
+            ],
         )
         assert result == 0
         assert output_dir.exists()
 
     def test_main_dry_run(
-        self, test_project_path: Path, output_dir: Path, add_test_project_to_path
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+        add_test_project_to_path,
     ):
         result = main(
             [
@@ -227,7 +231,7 @@ class TestMain:
                 str(test_project_path),
                 "--dry-run",
                 "--quiet",
-            ]
+            ],
         )
         assert result == 0
         assert not output_dir.exists()
@@ -247,7 +251,7 @@ class TestMain:
                 "extracted",
                 "-o",
                 str(tmp_path / "out"),
-            ]
+            ],
         )
         assert result == 1
 
@@ -269,7 +273,7 @@ class TestMain:
                 str(test_project_path),
                 "--filesystem-only",
                 "--quiet",
-            ]
+            ],
         )
         assert result == 0
         assert output_dir.exists()

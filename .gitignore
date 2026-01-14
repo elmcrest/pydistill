@@ -14,3 +14,4 @@ wheels/
 .DS_Store
 .python-version
 .ruff_cache
+.claude

@@ -5,11 +5,8 @@ but aren't covered by the basic test suite.
 """
 
 import ast
-import sys
 from pathlib import Path
 from textwrap import dedent
-
-import pytest
 
 from pydistill.discovery import (
     ImportCollector,
@@ -108,19 +105,23 @@ class TestCircularImports:
         pkg.mkdir()
         (pkg / "__init__.py").write_text("")
 
-        (pkg / "module_a.py").write_text(dedent("""
+        (pkg / "module_a.py").write_text(
+            dedent("""
             from circular_pkg.module_b import B
 
             class A:
                 pass
-        """))
+        """),
+        )
 
-        (pkg / "module_b.py").write_text(dedent("""
+        (pkg / "module_b.py").write_text(
+            dedent("""
             from circular_pkg.module_a import A
 
             class B:
                 pass
-        """))
+        """),
+        )
 
         resolver = ModuleResolver([tmp_path], filesystem_only=True)
         entry_points = [EntryPoint.parse("circular_pkg.module_a:A")]
@@ -143,19 +144,23 @@ class TestCircularImports:
         pkg.mkdir(parents=True)
         (pkg / "__init__.py").write_text("")
 
-        (pkg / "module_a.py").write_text(dedent("""
+        (pkg / "module_a.py").write_text(
+            dedent("""
             from circular_pkg.module_b import B
 
             class A:
                 b: "B"
-        """))
+        """),
+        )
 
-        (pkg / "module_b.py").write_text(dedent("""
+        (pkg / "module_b.py").write_text(
+            dedent("""
             from circular_pkg.module_a import A
 
             class B:
                 a: "A"
-        """))
+        """),
+        )
 
         output_dir = tmp_path / "output"
 
@@ -295,17 +300,21 @@ class TestNamespacePackages:
         pkg.mkdir(parents=True)
         # No __init__.py - this is a namespace package
 
-        (pkg / "models.py").write_text(dedent("""
+        (pkg / "models.py").write_text(
+            dedent("""
             from nspkg.sub.utils import helper
 
             class Model:
                 pass
-        """))
+        """),
+        )
 
-        (pkg / "utils.py").write_text(dedent("""
+        (pkg / "utils.py").write_text(
+            dedent("""
             def helper():
                 pass
-        """))
+        """),
+        )
 
         resolver = ModuleResolver([tmp_path], filesystem_only=True)
         entry_points = [EntryPoint.parse("nspkg.sub.models:Model")]
@@ -329,12 +338,14 @@ class TestInitPyWithCode:
         pkg.mkdir()
 
         # __init__.py with re-exports
-        (pkg / "__init__.py").write_text(dedent("""
+        (pkg / "__init__.py").write_text(
+            dedent("""
             from mypkg.models import Model
             from mypkg.utils import helper
 
             __all__ = ["Model", "helper"]
-        """))
+        """),
+        )
 
         (pkg / "models.py").write_text("class Model: pass")
         (pkg / "utils.py").write_text("def helper(): pass")
@@ -359,11 +370,13 @@ class TestInitPyWithCode:
         pkg = src / "mypkg"
         pkg.mkdir(parents=True)
 
-        (pkg / "__init__.py").write_text(dedent("""
+        (pkg / "__init__.py").write_text(
+            dedent("""
             from mypkg.models import Model
 
             __all__ = ["Model"]
-        """))
+        """),
+        )
 
         (pkg / "models.py").write_text("class Model: pass")
 
@@ -465,14 +478,14 @@ class TestEncodingHandling:
 
         # Write with Latin-1 encoding (incompatible bytes for UTF-8)
         (pkg / "models.py").write_bytes(
-            b"# Latin-1: caf\xe9\nclass Model: pass"
+            b"# Latin-1: caf\xe9\nclass Model: pass",
         )
 
         resolver = ModuleResolver([tmp_path], filesystem_only=True)
         entry_points = [EntryPoint.parse("mypkg.models:Model")]
 
         warnings = []
-        discovered = discover_modules(
+        discover_modules(
             entry_points=entry_points,
             base_package="mypkg",
             resolver=resolver,

@@ -1,7 +1,4 @@
 """Vehicle models."""
-from typing import Optional
-
-from pydantic import BaseModel
 
 from project_a.common.types import Status, TimestampMixin
 
@@ -13,4 +10,4 @@ class Vehicle(TimestampMixin):
     model: str
     year: int
     status: Status = Status.ACTIVE
-    notes: Optional[str] = None
+    notes: str | None = None

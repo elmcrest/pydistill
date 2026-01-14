@@ -1,6 +1,6 @@
 """Tests for pydistill.rewriter."""
 
-from pydistill.rewriter import ImportRewriter, rewrite_imports
+from pydistill.rewriter import rewrite_imports
 
 
 class TestImportRewriter:
