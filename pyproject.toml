@@ -43,6 +43,7 @@ packages = ["src/pydistill"]
 dev = [
     "pydantic>=2.0",
     "pytest>=8.0",
+    "pytest-cov>=7.0.0",
     "ruff>=0.14.11",
     "ty>=0.0.11",
 ]
