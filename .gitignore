@@ -10,3 +10,7 @@ wheels/
 .venv
 
 .pytest_cache
+
+.DS_Store
+.python-version
+.ruff_cache
