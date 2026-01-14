@@ -187,6 +187,9 @@ Formatting failures are non-fatal—extraction will succeed even if the formatte
 - Only follows imports within `--base-package` (by design)
 - Extracts entire modules, not individual classes (a module containing `User` and `Admin` will include both)
 - Relative imports are preserved as-is (they work in the output package since structure is maintained)
+- **Comments are not preserved**: The AST-based rewriting uses `ast.parse()` and `ast.unparse()`, which strips comments from source files. This is acceptable for artifact/tarball use cases but means the extracted code loses inline documentation. Use `--format` to ensure consistent formatting of the output.
+- **Dynamic imports are not traced**: Imports using `importlib.import_module()` or `__import__()` cannot be statically analyzed
+- **Star imports (`from x import *`)**: The module path is rewritten correctly, but transitive dependencies imported via `__all__` re-exports may not be discovered
 
 ## Development
 
