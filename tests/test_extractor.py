@@ -148,7 +148,9 @@ class TestModuleExtractor:
         extractor.extract(entry_points)
 
         # Check that imports were rewritten
-        models_content = (output_dir / "extracted" / "appointments" / "models.py").read_text()
+        models_content = (
+            output_dir / "extracted" / "appointments" / "models.py"
+        ).read_text()
         assert "from extracted.common.types import" in models_content
         assert "from extracted.vehicles.models import" in models_content
         assert "from project_a" not in models_content
@@ -258,7 +260,9 @@ class TestModuleExtractor:
 
         assert result.success
         # Verify files exist and are valid Python
-        models_content = (output_dir / "extracted" / "appointments" / "models.py").read_text()
+        models_content = (
+            output_dir / "extracted" / "appointments" / "models.py"
+        ).read_text()
         assert "from extracted.common.types import" in models_content
 
     def test_format_with_unavailable_formatter(
