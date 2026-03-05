@@ -180,8 +180,8 @@ class TestCircularImports:
         assert len(result.modules_extracted) == 2
 
         # Verify imports were rewritten in both files
-        module_a = (output_dir / "module_a.py").read_text()
-        module_b = (output_dir / "module_b.py").read_text()
+        module_a = (output_dir / "extracted" / "module_a.py").read_text()
+        module_b = (output_dir / "extracted" / "module_b.py").read_text()
         assert "from extracted.module_b import B" in module_a
         assert "from extracted.module_a import A" in module_b
 
@@ -397,7 +397,7 @@ class TestInitPyWithCode:
         assert result.success
 
         # The root __init__.py should contain the rewritten imports
-        init_content = (output_dir / "__init__.py").read_text()
+        init_content = (output_dir / "extracted" / "__init__.py").read_text()
         assert "from extracted.models import Model" in init_content
 
 

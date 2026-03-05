@@ -58,10 +58,10 @@ class TestModuleExtractor:
         assert result.success
         assert len(result.modules_extracted) == 3
         assert output_dir.exists()
-        assert (output_dir / "__init__.py").exists()
-        assert (output_dir / "appointments" / "models.py").exists()
-        assert (output_dir / "common" / "types.py").exists()
-        assert (output_dir / "vehicles" / "models.py").exists()
+        assert (output_dir / "extracted" / "__init__.py").exists()
+        assert (output_dir / "extracted" / "appointments" / "models.py").exists()
+        assert (output_dir / "extracted" / "common" / "types.py").exists()
+        assert (output_dir / "extracted" / "vehicles" / "models.py").exists()
         assert (output_dir / "pyproject.toml").exists()
 
     def test_extract_writes_pyproject_by_default(
@@ -98,7 +98,7 @@ class TestModuleExtractor:
             "extracted.common",
             "extracted.vehicles",
         ]
-        assert data["tool"]["setuptools"]["package-dir"]["extracted"] == "."
+        assert "package-dir" not in data["tool"]["setuptools"]
 
     def test_extract_writes_custom_dist_metadata(
         self,
@@ -148,7 +148,7 @@ class TestModuleExtractor:
         extractor.extract(entry_points)
 
         # Check that imports were rewritten
-        models_content = (output_dir / "appointments" / "models.py").read_text()
+        models_content = (output_dir / "extracted" / "appointments" / "models.py").read_text()
         assert "from extracted.common.types import" in models_content
         assert "from extracted.vehicles.models import" in models_content
         assert "from project_a" not in models_content
@@ -202,7 +202,7 @@ class TestModuleExtractor:
         # Old file should be gone
         assert not old_file.exists()
         # New files should exist
-        assert (output_dir / "appointments" / "models.py").exists()
+        assert (output_dir / "extracted" / "appointments" / "models.py").exists()
 
     def test_extracted_package_is_importable(
         self,
@@ -221,8 +221,8 @@ class TestModuleExtractor:
         entry_points = [EntryPoint.parse("project_a.appointments.models:Appointment")]
         extractor.extract(entry_points)
 
-        # Add output dir parent to sys.path and try importing
-        sys.path.insert(0, str(output_dir.parent))
+        # Add output dir to sys.path and try importing
+        sys.path.insert(0, str(output_dir))
         try:
             from extracted.appointments.models import Appointment  # type: ignore[import-not-found]
             from extracted.common.types import Status  # type: ignore[import-not-found]
@@ -230,7 +230,7 @@ class TestModuleExtractor:
             assert hasattr(Appointment, "model_fields")
             assert hasattr(Status, "ACTIVE")
         finally:
-            sys.path.remove(str(output_dir.parent))
+            sys.path.remove(str(output_dir))
 
     @pytest.mark.skipif(
         shutil.which("ruff") is None,
@@ -258,7 +258,7 @@ class TestModuleExtractor:
 
         assert result.success
         # Verify files exist and are valid Python
-        models_content = (output_dir / "appointments" / "models.py").read_text()
+        models_content = (output_dir / "extracted" / "appointments" / "models.py").read_text()
         assert "from extracted.common.types import" in models_content
 
     def test_format_with_unavailable_formatter(
@@ -283,7 +283,7 @@ class TestModuleExtractor:
 
         # Should still succeed - formatting failure is non-fatal
         assert result.success
-        assert (output_dir / "appointments" / "models.py").exists()
+        assert (output_dir / "extracted" / "appointments" / "models.py").exists()
 
     def test_format_disabled_by_default(
         self,

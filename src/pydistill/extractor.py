@@ -105,9 +105,6 @@ class ModuleExtractor:
                 + ", ".join(self._toml_string(pkg) for pkg in package_names)
                 + "]",
                 "",
-                "[tool.setuptools.package-dir]",
-                f'{self._toml_string(self.output_package)} = "."',
-                "",
             ],
         )
 
@@ -180,6 +177,9 @@ class ModuleExtractor:
         # Create output directory
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
+        # Package directory lives inside output_dir
+        package_dir = self.output_dir / self.output_package
+
         # Collect all directories that need __init__.py
         init_dirs: set[Path] = set()
 
@@ -191,7 +191,7 @@ class ModuleExtractor:
                 continue
 
             relative_path = self.get_relative_path(module_name)
-            output_path = self.output_dir / relative_path
+            output_path = package_dir / relative_path
 
             # Create parent directories
             output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -217,8 +217,9 @@ class ModuleExtractor:
             self._log(f"  {module_name} -> {output_path}")
 
         # Create root __init__.py
-        root_init = self.output_dir / "__init__.py"
+        root_init = package_dir / "__init__.py"
         if not root_init.exists():
+            package_dir.mkdir(parents=True, exist_ok=True)
             root_init.write_text(
                 f'"""Auto-generated {self.output_package} package."""\n'
             )
@@ -226,7 +227,7 @@ class ModuleExtractor:
 
         # Create missing __init__.py files
         for init_dir in sorted(init_dirs):
-            init_path = self.output_dir / init_dir / "__init__.py"
+            init_path = package_dir / init_dir / "__init__.py"
             if not init_path.exists():
                 init_path.parent.mkdir(parents=True, exist_ok=True)
                 init_path.write_text('"""Auto-generated subpackage."""\n')

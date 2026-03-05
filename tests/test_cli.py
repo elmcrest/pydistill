@@ -400,9 +400,9 @@ class TestMain:
         )
         assert result == 0
         assert output_dir.exists()
-        assert (output_dir / "appointments" / "models.py").exists()
-        assert (output_dir / "common" / "types.py").exists()
-        assert (output_dir / "vehicles" / "models.py").exists()
+        assert (output_dir / "extracted" / "appointments" / "models.py").exists()
+        assert (output_dir / "extracted" / "common" / "types.py").exists()
+        assert (output_dir / "extracted" / "vehicles" / "models.py").exists()
 
     def test_main_with_distribution_options(
         self,
