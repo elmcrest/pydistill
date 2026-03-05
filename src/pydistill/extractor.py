@@ -75,7 +75,7 @@ class ModuleExtractor:
         """Serialize a string as a TOML-compatible basic string."""
         return json.dumps(value)
 
-    def _write_pyproject(self) -> Path:
+    def _write_pyproject(self, package_names: list[str]) -> Path:
         """Write packaging metadata so extracted output can be installed directly."""
         distribution_name = self.dist_name or self.output_package
         dependency_list = self.dependencies
@@ -101,7 +101,9 @@ class ModuleExtractor:
             [
                 "",
                 "[tool.setuptools]",
-                f"packages = [{self._toml_string(self.output_package)}]",
+                "packages = ["
+                + ", ".join(self._toml_string(pkg) for pkg in package_names)
+                + "]",
                 "",
                 "[tool.setuptools.package-dir]",
                 f'{self._toml_string(self.output_package)} = "."',
@@ -231,7 +233,12 @@ class ModuleExtractor:
                 result.files_written.append(init_path)
                 self._log(f"  Created: {init_path}")
 
-        pyproject_path = self._write_pyproject()
+        package_names = [self.output_package]
+        package_names.extend(
+            f"{self.output_package}.{'.'.join(path.parts)}"
+            for path in sorted(init_dirs)
+        )
+        pyproject_path = self._write_pyproject(package_names)
         result.files_written.append(pyproject_path)
         self._log(f"  Created: {pyproject_path}")
 

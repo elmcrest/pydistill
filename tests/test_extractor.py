@@ -92,7 +92,12 @@ class TestModuleExtractor:
         assert data["project"]["version"] == "0.1.0"
         assert data["project"]["requires-python"] == ">=3.11"
         assert data["project"]["dependencies"] == []
-        assert data["tool"]["setuptools"]["packages"] == ["extracted"]
+        assert data["tool"]["setuptools"]["packages"] == [
+            "extracted",
+            "extracted.appointments",
+            "extracted.common",
+            "extracted.vehicles",
+        ]
         assert data["tool"]["setuptools"]["package-dir"]["extracted"] == "."
 
     def test_extract_writes_custom_dist_metadata(
