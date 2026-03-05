@@ -15,3 +15,5 @@ wheels/
 .python-version
 .ruff_cache
 .claude
+
+.vscode

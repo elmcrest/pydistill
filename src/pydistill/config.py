@@ -22,6 +22,9 @@ class PyDistillConfig:
     filesystem_only: bool = False
     format: bool = False
     formatter: str = "ruff format"
+    dist_name: str | None = None
+    dist_version: str = "0.1.0"
+    dependencies: list[str] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> PyDistillConfig:
@@ -41,6 +44,9 @@ class PyDistillConfig:
             filesystem_only=pydistill_data.get("filesystem_only", False),
             format=pydistill_data.get("format", False),
             formatter=pydistill_data.get("formatter", "ruff format"),
+            dist_name=pydistill_data.get("dist_name"),
+            dist_version=pydistill_data.get("dist_version", "0.1.0"),
+            dependencies=pydistill_data.get("dependencies", []),
         )
 
     @classmethod
@@ -81,6 +87,9 @@ class PyDistillConfig:
         filesystem_only: bool | None = None,
         format: bool | None = None,
         formatter: str | None = None,
+        dist_name: str | None = None,
+        dist_version: str | None = None,
+        dependencies: list[str] | None = None,
     ) -> PyDistillConfig:
         """Merge CLI arguments with config file (CLI takes precedence)."""
         return PyDistillConfig(
@@ -95,4 +104,11 @@ class PyDistillConfig:
             else self.filesystem_only,
             format=format if format is not None else self.format,
             formatter=formatter if formatter else self.formatter,
+            dist_name=dist_name if dist_name is not None else self.dist_name,
+            dist_version=dist_version
+            if dist_version is not None
+            else self.dist_version,
+            dependencies=dependencies
+            if dependencies is not None
+            else self.dependencies,
         )

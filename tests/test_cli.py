@@ -1,5 +1,6 @@
 """Tests for pydistill.cli."""
 
+import tomllib
 from pathlib import Path
 
 from pydistill.cli import create_parser, main, validate_config
@@ -153,6 +154,47 @@ class TestCreateParser:
         )
         assert args.formatter == "ruff format --line-length 120"
 
+    def test_parse_dist_metadata(self):
+        parser = create_parser()
+        args = parser.parse_args(
+            [
+                "-e",
+                "myapp:User",
+                "-b",
+                "myapp",
+                "-p",
+                "out",
+                "-o",
+                "./dist",
+                "--dist-name",
+                "my-exported-models",
+                "--dist-version",
+                "1.2.3",
+            ],
+        )
+        assert args.dist_name == "my-exported-models"
+        assert args.dist_version == "1.2.3"
+
+    def test_parse_dependencies(self):
+        parser = create_parser()
+        args = parser.parse_args(
+            [
+                "-e",
+                "myapp:User",
+                "-b",
+                "myapp",
+                "-p",
+                "out",
+                "-o",
+                "./dist",
+                "--dependency",
+                "pydantic>=2.0",
+                "--dependency",
+                "email-validator>=2.0",
+            ],
+        )
+        assert args.dependencies == ["pydantic>=2.0", "email-validator>=2.0"]
+
 
 class TestValidateConfig:
     def test_valid_config(self):
@@ -184,6 +226,49 @@ class TestValidateConfig:
         )
         errors = validate_config(config)
         assert any("base package" in e.lower() for e in errors)
+
+    def test_invalid_output_package(self):
+        config = PyDistillConfig(
+            entries=["myapp:User"],
+            base_package="myapp",
+            output_package="invalid-package",
+            output_dir=Path("./dist"),
+        )
+        errors = validate_config(config)
+        assert any("valid python identifier" in e.lower() for e in errors)
+
+    def test_empty_dist_name(self):
+        config = PyDistillConfig(
+            entries=["myapp:User"],
+            base_package="myapp",
+            output_package="extracted",
+            output_dir=Path("./dist"),
+            dist_name="   ",
+        )
+        errors = validate_config(config)
+        assert any("distribution name cannot be empty" in e.lower() for e in errors)
+
+    def test_empty_dist_version(self):
+        config = PyDistillConfig(
+            entries=["myapp:User"],
+            base_package="myapp",
+            output_package="extracted",
+            output_dir=Path("./dist"),
+            dist_version="",
+        )
+        errors = validate_config(config)
+        assert any("distribution version cannot be empty" in e.lower() for e in errors)
+
+    def test_empty_dependency_specifier(self):
+        config = PyDistillConfig(
+            entries=["myapp:User"],
+            base_package="myapp",
+            output_package="extracted",
+            output_dir=Path("./dist"),
+            dependencies=["pydantic>=2", " "],
+        )
+        errors = validate_config(config)
+        assert any("dependency specifiers cannot be empty" in e.lower() for e in errors)
 
 
 class TestMain:
@@ -280,3 +365,39 @@ class TestMain:
         assert (output_dir / "appointments" / "models.py").exists()
         assert (output_dir / "common" / "types.py").exists()
         assert (output_dir / "vehicles" / "models.py").exists()
+
+    def test_main_with_distribution_options(
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+    ):
+        result = main(
+            [
+                "-e",
+                "project_a.appointments.models:Appointment",
+                "-b",
+                "project_a",
+                "-p",
+                "extracted",
+                "-o",
+                str(output_dir),
+                "-s",
+                str(test_project_path),
+                "--filesystem-only",
+                "--dist-name",
+                "project-a-extract",
+                "--dist-version",
+                "2.1.0",
+                "--dependency",
+                "pydantic>=2.0",
+                "--quiet",
+            ],
+        )
+
+        assert result == 0
+        pyproject = output_dir / "pyproject.toml"
+        assert pyproject.exists()
+        data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+        assert data["project"]["name"] == "project-a-extract"
+        assert data["project"]["version"] == "2.1.0"
+        assert data["project"]["dependencies"] == ["pydantic>=2.0"]

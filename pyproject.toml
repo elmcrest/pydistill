@@ -1,12 +1,17 @@
 [project]
 name = "pydistill"
-version = "0.1.0"
+version = "0.2.0"
 description = "Extract Python models and dependencies into standalone packages"
-authors = [
-    {name = "Marius Räsener", email = "marius@raesener.de"}
+authors = [{ name = "Marius Räsener", email = "marius@raesener.de" }]
+license = { text = "MIT" }
+keywords = [
+    "pydantic",
+    "extraction",
+    "models",
+    "refactoring",
+    "dependencies",
+    "ast",
 ]
-license = {text = "MIT"}
-keywords = ["pydantic", "extraction", "models", "refactoring", "dependencies", "ast"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: MIT License",
@@ -20,9 +25,7 @@ classifiers = [
 ]
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = [
-    "pydantic[email]>=2.12.5",
-]
+dependencies = ["pydantic[email]>=2.12.5"]
 
 [project.scripts]
 pydistill = "pydistill.cli:main"

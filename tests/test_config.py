@@ -14,6 +14,9 @@ class TestPyDistillConfig:
                 "output_package": "extracted",
                 "output_dir": "./dist",
                 "clean": True,
+                "dist_name": "extracted-models",
+                "dist_version": "1.2.3",
+                "dependencies": ["pydantic>=2", "email-validator>=2.0"],
             },
         }
         config = PyDistillConfig.from_dict(data)
@@ -23,6 +26,9 @@ class TestPyDistillConfig:
         assert config.output_package == "extracted"
         assert config.output_dir == Path("./dist")
         assert config.clean is True
+        assert config.dist_name == "extracted-models"
+        assert config.dist_version == "1.2.3"
+        assert config.dependencies == ["pydantic>=2", "email-validator>=2.0"]
 
     def test_from_dict_without_pydistill_key(self):
         data = {
@@ -43,6 +49,9 @@ class TestPyDistillConfig:
             output_package="extracted",
             output_dir=Path("./dist"),
             clean=False,
+            dist_name="from-file",
+            dist_version="0.9.0",
+            dependencies=["pydantic>=2"],
         )
 
         merged = config.merge_with_args(
@@ -51,6 +60,9 @@ class TestPyDistillConfig:
             output_package="cli_extracted",
             output_dir=None,  # Should keep original
             clean=True,
+            dist_name="from-cli",
+            dist_version="1.0.0",
+            dependencies=["typing-extensions>=4.0"],
         )
 
         assert merged.entries == ["other.models:Order"]
@@ -58,6 +70,21 @@ class TestPyDistillConfig:
         assert merged.output_package == "cli_extracted"
         assert merged.output_dir == Path("./dist")  # Kept from file
         assert merged.clean is True
+        assert merged.dist_name == "from-cli"
+        assert merged.dist_version == "1.0.0"
+        assert merged.dependencies == ["typing-extensions>=4.0"]
+
+    def test_merge_with_args_keeps_file_dependencies_when_cli_omits(self):
+        config = PyDistillConfig(
+            entries=["myapp.models:User"],
+            base_package="myapp",
+            output_package="extracted",
+            output_dir=Path("./dist"),
+            dependencies=["pydantic>=2"],
+        )
+
+        merged = config.merge_with_args(dependencies=None)
+        assert merged.dependencies == ["pydantic>=2"]
 
     def test_load_from_file(self, tmp_path: Path):
         config_file = tmp_path / "pydistill.toml"
@@ -68,6 +95,9 @@ base_package = "myapp"
 output_package = "extracted"
 output_dir = "./dist/extracted"
 clean = true
+dist_name = "extracted-models"
+dist_version = "2.0.0"
+dependencies = ["pydantic>=2", "email-validator>=2"]
 """)
 
         config = PyDistillConfig.load(config_file)
@@ -77,3 +107,6 @@ clean = true
         assert config.output_package == "extracted"
         assert config.output_dir == Path("./dist/extracted")
         assert config.clean is True
+        assert config.dist_name == "extracted-models"
+        assert config.dist_version == "2.0.0"
+        assert config.dependencies == ["pydantic>=2", "email-validator>=2"]

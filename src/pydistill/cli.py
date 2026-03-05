@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import keyword
 import sys
 from pathlib import Path
 
@@ -138,6 +139,29 @@ Configuration file (pydistill.toml):
         help="Formatter command to use (default: 'ruff format'). Implies --format.",
     )
 
+    parser.add_argument(
+        "--dist-name",
+        metavar="NAME",
+        help="Distribution name to write in generated pyproject.toml "
+        "(default: output package name)",
+    )
+
+    parser.add_argument(
+        "--dist-version",
+        metavar="VERSION",
+        help="Distribution version to write in generated pyproject.toml "
+        "(default: 0.1.0)",
+    )
+
+    parser.add_argument(
+        "--dependency",
+        action="append",
+        dest="dependencies",
+        metavar="SPEC",
+        help="Dependency specifier for generated pyproject.toml "
+        "(can be repeated, e.g. 'pydantic>=2.0')",
+    )
+
     return parser
 
 
@@ -167,6 +191,9 @@ def load_config(args: argparse.Namespace) -> PyDistillConfig:
             filesystem_only=args.filesystem_only if args.filesystem_only else None,
             format=format_enabled if format_enabled else None,
             formatter=args.formatter,
+            dist_name=args.dist_name,
+            dist_version=args.dist_version,
+            dependencies=args.dependencies if args.dependencies is not None else None,
         )
     else:
         config = PyDistillConfig(
@@ -179,6 +206,9 @@ def load_config(args: argparse.Namespace) -> PyDistillConfig:
             filesystem_only=args.filesystem_only,
             format=format_enabled,
             formatter=args.formatter or "ruff format",
+            dist_name=args.dist_name,
+            dist_version=args.dist_version or "0.1.0",
+            dependencies=args.dependencies or [],
         )
 
     return config
@@ -202,11 +232,28 @@ def validate_config(config: PyDistillConfig) -> list[str]:
         errors.append(
             "No output package specified. Use --output-package or configure in pydistill.toml",
         )
+    elif not config.output_package.isidentifier() or keyword.iskeyword(
+        config.output_package
+    ):
+        errors.append(
+            "Output package must be a valid Python identifier "
+            "(e.g., 'extracted_models')",
+        )
 
     if not config.output_dir:
         errors.append(
             "No output directory specified. Use --output-dir or configure in pydistill.toml",
         )
+
+    if config.dist_name is not None and not config.dist_name.strip():
+        errors.append("Distribution name cannot be empty")
+
+    if not config.dist_version or not config.dist_version.strip():
+        errors.append("Distribution version cannot be empty")
+
+    empty_deps = [dep for dep in config.dependencies if not dep.strip()]
+    if empty_deps:
+        errors.append("Dependency specifiers cannot be empty")
 
     return errors
 
@@ -245,6 +292,9 @@ def main(argv: list[str] | None = None) -> int:
         filesystem_only=config.filesystem_only,
         format=config.format,
         formatter=config.formatter,
+        dist_name=config.dist_name,
+        dist_version=config.dist_version,
+        dependencies=config.dependencies,
     )
 
     result = extractor.extract(entry_points)

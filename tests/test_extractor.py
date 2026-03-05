@@ -1,13 +1,40 @@
 """Tests for pydistill.extractor."""
 
 import shutil
+import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
 
 from pydistill.extractor import ModuleExtractor
 from pydistill.models import EntryPoint
+
+
+def _python_for_install_test() -> str | None:
+    """Find a Python executable with pip and setuptools available."""
+    candidates = [
+        sys.executable,
+        getattr(sys, "_base_executable", None),
+        shutil.which("python3"),
+    ]
+    seen: set[str] = set()
+    for candidate in candidates:
+        if not candidate or candidate in seen:
+            continue
+        seen.add(candidate)
+        result = subprocess.run(
+            [candidate, "-c", "import pip, setuptools"],
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            return candidate
+    return None
+
+
+INSTALL_TEST_PYTHON = _python_for_install_test()
 
 
 class TestModuleExtractor:
@@ -35,6 +62,68 @@ class TestModuleExtractor:
         assert (output_dir / "appointments" / "models.py").exists()
         assert (output_dir / "common" / "types.py").exists()
         assert (output_dir / "vehicles" / "models.py").exists()
+        assert (output_dir / "pyproject.toml").exists()
+
+    def test_extract_writes_pyproject_by_default(
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+        add_test_project_to_path,
+    ):
+        extractor = ModuleExtractor(
+            base_package="project_a",
+            output_package="extracted",
+            output_dir=output_dir,
+            source_roots=[test_project_path],
+            quiet=True,
+        )
+
+        entry_points = [EntryPoint.parse("project_a.appointments.models:Appointment")]
+        result = extractor.extract(entry_points)
+        pyproject_path = output_dir / "pyproject.toml"
+
+        assert result.success
+        assert pyproject_path.exists()
+
+        data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+        assert data["build-system"]["requires"] == ["setuptools>=68"]
+        assert data["build-system"]["build-backend"] == "setuptools.build_meta"
+        assert data["project"]["name"] == "extracted"
+        assert data["project"]["version"] == "0.1.0"
+        assert data["project"]["requires-python"] == ">=3.11"
+        assert data["project"]["dependencies"] == []
+        assert data["tool"]["setuptools"]["packages"] == ["extracted"]
+        assert data["tool"]["setuptools"]["package-dir"]["extracted"] == "."
+
+    def test_extract_writes_custom_dist_metadata(
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+        add_test_project_to_path,
+    ):
+        extractor = ModuleExtractor(
+            base_package="project_a",
+            output_package="extracted",
+            output_dir=output_dir,
+            source_roots=[test_project_path],
+            quiet=True,
+            dist_name="appointments-contracts",
+            dist_version="2.4.1",
+            dependencies=["pydantic>=2.0", "email-validator>=2.0"],
+        )
+
+        entry_points = [EntryPoint.parse("project_a.appointments.models:Appointment")]
+        result = extractor.extract(entry_points)
+        pyproject_path = output_dir / "pyproject.toml"
+
+        assert result.success
+        data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+        assert data["project"]["name"] == "appointments-contracts"
+        assert data["project"]["version"] == "2.4.1"
+        assert data["project"]["dependencies"] == [
+            "pydantic>=2.0",
+            "email-validator>=2.0",
+        ]
 
     def test_extract_rewrites_imports(
         self,

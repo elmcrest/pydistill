@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shlex
 import shutil
 import subprocess
@@ -29,6 +30,9 @@ class ModuleExtractor:
     filesystem_only: bool = False
     format: bool = False
     formatter: str = "ruff format"
+    dist_name: str | None = None
+    dist_version: str = "0.1.0"
+    dependencies: list[str] = field(default_factory=list)
     output: TextIO = field(default_factory=lambda: sys.stdout)
 
     # Internal state
@@ -65,6 +69,49 @@ class ModuleExtractor:
         except (OSError, subprocess.SubprocessError) as e:
             self._warn(f"Failed to format {file_path}: {e}")
             return False
+
+    @staticmethod
+    def _toml_string(value: str) -> str:
+        """Serialize a string as a TOML-compatible basic string."""
+        return json.dumps(value)
+
+    def _write_pyproject(self) -> Path:
+        """Write packaging metadata so extracted output can be installed directly."""
+        distribution_name = self.dist_name or self.output_package
+        dependency_list = self.dependencies
+
+        pyproject_lines = [
+            "[build-system]",
+            'requires = ["setuptools>=68"]',
+            'build-backend = "setuptools.build_meta"',
+            "",
+            "[project]",
+            f"name = {self._toml_string(distribution_name)}",
+            f"version = {self._toml_string(self.dist_version)}",
+            'requires-python = ">=3.11"',
+        ]
+
+        if dependency_list:
+            dependencies = ", ".join(self._toml_string(dep) for dep in dependency_list)
+            pyproject_lines.append(f"dependencies = [{dependencies}]")
+        else:
+            pyproject_lines.append("dependencies = []")
+
+        pyproject_lines.extend(
+            [
+                "",
+                "[tool.setuptools]",
+                f"packages = [{self._toml_string(self.output_package)}]",
+                "",
+                "[tool.setuptools.package-dir]",
+                f'{self._toml_string(self.output_package)} = "."',
+                "",
+            ],
+        )
+
+        pyproject_path = self.output_dir / "pyproject.toml"
+        pyproject_path.write_text("\n".join(pyproject_lines), encoding="utf-8")
+        return pyproject_path
 
     def get_relative_path(self, module_name: str) -> Path:
         """Get the relative path for a module within the output package."""
@@ -183,6 +230,10 @@ class ModuleExtractor:
                 init_path.write_text('"""Auto-generated subpackage."""\n')
                 result.files_written.append(init_path)
                 self._log(f"  Created: {init_path}")
+
+        pyproject_path = self._write_pyproject()
+        result.files_written.append(pyproject_path)
+        self._log(f"  Created: {pyproject_path}")
 
         # Format files if requested
         if self.format:

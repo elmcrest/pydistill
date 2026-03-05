@@ -39,6 +39,13 @@ This will:
 2. Copy the relevant source files to `./dist/extracted_models/`
 3. Rewrite imports (`myapp.*` → `extracted_models.*`)
 4. Generate `__init__.py` files so the package is importable
+5. Generate `pyproject.toml` so the output is installable with `pip`
+
+Install the extracted output directly:
+
+```bash
+pip install ./dist/extracted_models
+```
 
 ## Configuration
 
@@ -58,6 +65,9 @@ Options:
   --clean                     Remove output directory first
   -q, --quiet                 Suppress output
   -f, --filesystem-only       Skip importlib, use only filesystem resolution
+  --dist-name NAME            Distribution name in generated pyproject.toml
+  --dist-version VERSION      Distribution version in generated pyproject.toml
+  --dependency SPEC           Dependency specifier (can be repeated)
   --format                    Format extracted files (default: ruff format)
   --formatter CMD             Custom formatter command (implies --format)
   --version                   Show version
@@ -78,6 +88,9 @@ base_package = "myapp"
 output_package = "extracted_models"
 output_dir = "./dist/extracted_models"
 clean = true
+dist_name = "extracted-models"
+dist_version = "0.1.0"
+dependencies = ["pydantic>=2.0", "email-validator>=2.0"]
 # filesystem_only = true  # Enable for uninstallable projects
 # format = true           # Format extracted files
 # formatter = "ruff format"  # Custom formatter command
@@ -121,6 +134,7 @@ Produces:
 
 ```
 dist/extracted/
+├── pyproject.toml
 ├── __init__.py
 ├── common/
 │   ├── __init__.py
@@ -174,7 +188,7 @@ Formatting failures are non-fatal—extraction will succeed even if the formatte
 2. **Discover imports** - Use Python's `ast` module to find all `import` and `from ... import` statements
 3. **BFS traversal** - Follow imports transitively within the base package (ignores third-party like `pydantic`, `datetime`, etc.)
 4. **Rewrite imports** - Use `ast.NodeTransformer` to rewrite module paths
-5. **Generate package** - Copy files preserving structure, create `__init__.py` files
+5. **Generate package** - Copy files preserving structure, create `__init__.py` files, and write `pyproject.toml`
 
 ## Use Cases
 
