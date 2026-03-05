@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import argparse
+import importlib.metadata
 import keyword
 import sys
 from pathlib import Path
 
-from pydistill import __version__
 from pydistill.config import PyDistillConfig
 from pydistill.extractor import ModuleExtractor
 from pydistill.models import EntryPoint
+
+
+def get_cli_version() -> str:
+    """Get CLI version from distribution metadata."""
+    return importlib.metadata.version("pydistill")
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -47,7 +52,7 @@ Configuration file (pydistill.toml):
     parser.add_argument(
         "--version",
         action="version",
-        version=f"%(prog)s {__version__}",
+        version=f"%(prog)s {get_cli_version()}",
     )
 
     parser.add_argument(

@@ -3,6 +3,9 @@
 import tomllib
 from pathlib import Path
 
+import pytest
+
+import pydistill.cli as pydistill_cli
 from pydistill.cli import create_parser, main, validate_config
 from pydistill.config import PyDistillConfig
 
@@ -194,6 +197,41 @@ class TestCreateParser:
             ],
         )
         assert args.dependencies == ["pydantic>=2.0", "email-validator>=2.0"]
+
+    def test_version_uses_distribution_metadata(self, monkeypatch, capsys):
+        captured_distribution_name: dict[str, str] = {}
+
+        def fake_version(distribution_name: str) -> str:
+            captured_distribution_name["value"] = distribution_name
+            return "9.9.9"
+
+        monkeypatch.setattr(
+            pydistill_cli.importlib.metadata,
+            "version",
+            fake_version,
+        )
+
+        parser = create_parser()
+        with pytest.raises(SystemExit) as exc_info:
+            parser.parse_args(["--version"])
+
+        assert exc_info.value.code == 0
+        assert captured_distribution_name["value"] == "pydistill"
+        version_output = capsys.readouterr().out
+        assert version_output == "pydistill 9.9.9\n"
+
+    def test_version_fails_fast_when_distribution_metadata_missing(self, monkeypatch):
+        def raise_package_not_found(_: str) -> str:
+            raise pydistill_cli.importlib.metadata.PackageNotFoundError()
+
+        monkeypatch.setattr(
+            pydistill_cli.importlib.metadata,
+            "version",
+            raise_package_not_found,
+        )
+
+        with pytest.raises(pydistill_cli.importlib.metadata.PackageNotFoundError):
+            create_parser()
 
 
 class TestValidateConfig:
