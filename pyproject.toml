@@ -1,6 +1,6 @@
 [project]
 name = "pydistill"
-version = "0.4.0"
+version = "0.4.1"
 description = "Extract Python models and dependencies into standalone packages"
 authors = [{ name = "Marius Räsener", email = "marius@raesener.de" }]
 license = { text = "MIT" }

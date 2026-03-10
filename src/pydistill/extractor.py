@@ -62,17 +62,33 @@ class ModuleExtractor:
     def _warn(self, message: str) -> None:
         print(f"Warning: {message}", file=sys.stderr)
 
+    def _check_formatter_available(self) -> bool:
+        """Check if the formatter command is available on PATH."""
+        formatter_cmd = shlex.split(self.formatter)[0]
+        return shutil.which(formatter_cmd) is not None
+
     def _format_file(self, file_path: Path) -> bool:
         """Format a single file using the configured formatter. Returns True on success."""
         try:
-            cmd = [*shlex.split(self.formatter), str(file_path)]
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                check=False,
-                shell=sys.platform == "win32",
-            )
+            if sys.platform == "win32":
+                cmd: str | list[str] = f'{self.formatter} "{file_path}"'
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    shell=True,
+                )
+            else:
+                cmd = [*shlex.split(self.formatter), str(file_path)]
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+            if result.returncode != 0 and result.stderr:
+                self._warn(f"Formatter error on {file_path}: {result.stderr.strip()}")
             return result.returncode == 0
         except (OSError, subprocess.SubprocessError) as e:
             self._warn(f"Failed to format {file_path}: {e}")
@@ -281,14 +297,22 @@ class ModuleExtractor:
 
         # Format files if requested
         if self.format:
-            self._log(f"\nFormatting with: {self.formatter}")
-            format_failures = 0
-            for file_path in result.files_written:
-                if file_path.suffix == ".py":
-                    if not self._format_file(file_path):
-                        format_failures += 1
-            if format_failures > 0:
-                self._warn(f"Failed to format {format_failures} file(s)")
+            if not self._check_formatter_available():
+                formatter_cmd = shlex.split(self.formatter)[0]
+                self._warn(
+                    f"Formatter '{formatter_cmd}' not found on PATH. "
+                    f"Install it (e.g. 'uv tool install {formatter_cmd}') "
+                    f"or skip --format."
+                )
+            else:
+                self._log(f"\nFormatting with: {self.formatter}")
+                format_failures = 0
+                for file_path in result.files_written:
+                    if file_path.suffix == ".py":
+                        if not self._format_file(file_path):
+                            format_failures += 1
+                if format_failures > 0:
+                    self._warn(f"Failed to format {format_failures} file(s)")
 
         self._log(f"\nExtraction complete! Output written to: {self.output_dir}")
 
