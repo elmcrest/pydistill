@@ -45,6 +45,8 @@ class ExtractionResult:
     modules_extracted: list[str] = field(default_factory=list)
     files_written: list[Path] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    version: str = ""
+    content_hash: str = ""
 
     @property
     def success(self) -> bool:

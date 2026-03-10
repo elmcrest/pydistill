@@ -23,7 +23,8 @@ class PyDistillConfig:
     format: bool = False
     formatter: str = "ruff format"
     dist_name: str | None = None
-    dist_version: str = "0.1.0"
+    dist_version: str = "1.0.0"
+    version_strategy: str = "auto-patch"
     dependencies: list[str] = field(default_factory=list)
 
     @classmethod
@@ -45,7 +46,8 @@ class PyDistillConfig:
             format=pydistill_data.get("format", False),
             formatter=pydistill_data.get("formatter", "ruff format"),
             dist_name=pydistill_data.get("dist_name"),
-            dist_version=pydistill_data.get("dist_version", "0.1.0"),
+            dist_version=pydistill_data.get("dist_version", "1.0.0"),
+            version_strategy=pydistill_data.get("version_strategy", "auto-patch"),
             dependencies=pydistill_data.get("dependencies", []),
         )
 
@@ -89,6 +91,7 @@ class PyDistillConfig:
         formatter: str | None = None,
         dist_name: str | None = None,
         dist_version: str | None = None,
+        version_strategy: str | None = None,
         dependencies: list[str] | None = None,
     ) -> PyDistillConfig:
         """Merge CLI arguments with config file (CLI takes precedence)."""
@@ -108,6 +111,9 @@ class PyDistillConfig:
             dist_version=dist_version
             if dist_version is not None
             else self.dist_version,
+            version_strategy=version_strategy
+            if version_strategy is not None
+            else self.version_strategy,
             dependencies=dependencies
             if dependencies is not None
             else self.dependencies,

@@ -1,5 +1,6 @@
 """Tests for pydistill.extractor."""
 
+import json
 import shutil
 import subprocess
 import sys
@@ -10,6 +11,7 @@ import pytest
 
 from pydistill.extractor import ModuleExtractor
 from pydistill.models import EntryPoint
+from pydistill.versioning import VersionStrategy
 
 
 def _python_for_install_test() -> str | None:
@@ -89,7 +91,7 @@ class TestModuleExtractor:
         assert data["build-system"]["requires"] == ["setuptools>=68"]
         assert data["build-system"]["build-backend"] == "setuptools.build_meta"
         assert data["project"]["name"] == "extracted"
-        assert data["project"]["version"] == "0.1.0"
+        assert data["project"]["version"] == "1.0.0"
         assert data["project"]["requires-python"] == ">=3.11"
         assert data["project"]["dependencies"] == []
         assert data["tool"]["setuptools"]["packages"] == [
@@ -114,6 +116,7 @@ class TestModuleExtractor:
             quiet=True,
             dist_name="appointments-contracts",
             dist_version="2.4.1",
+            version_strategy=VersionStrategy.MANUAL,
             dependencies=["pydantic>=2.0", "email-validator>=2.0"],
         )
 
@@ -305,3 +308,121 @@ class TestModuleExtractor:
         )
 
         assert extractor.format is False
+
+    def test_extract_writes_manifest(
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+        add_test_project_to_path,
+    ):
+        extractor = ModuleExtractor(
+            base_package="project_a",
+            output_package="extracted",
+            output_dir=output_dir,
+            source_roots=[test_project_path],
+            quiet=True,
+        )
+
+        entry_points = [EntryPoint.parse("project_a.appointments.models:Appointment")]
+        result = extractor.extract(entry_points)
+
+        manifest_path = output_dir / ".pydistill-manifest.json"
+        assert manifest_path.exists()
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        assert data["version"] == "1.0.0"
+        assert "content_hash" in data
+        assert len(data["content_hash"]) == 64  # SHA-256 hex
+        assert result.version == "1.0.0"
+        assert result.content_hash == data["content_hash"]
+
+    def test_extract_auto_bumps_version_on_change(
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+        add_test_project_to_path,
+    ):
+        entry_points = [EntryPoint.parse("project_a.appointments.models:Appointment")]
+
+        # First extraction
+        extractor = ModuleExtractor(
+            base_package="project_a",
+            output_package="extracted",
+            output_dir=output_dir,
+            source_roots=[test_project_path],
+            quiet=True,
+        )
+        result1 = extractor.extract(entry_points)
+        assert result1.version == "1.0.0"
+
+        # Modify a source file in the output to simulate changed content hash
+        # We tamper with the manifest's content_hash to simulate a change
+        manifest_path = output_dir / ".pydistill-manifest.json"
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        data["content_hash"] = "different_hash"
+        manifest_path.write_text(json.dumps(data), encoding="utf-8")
+
+        # Second extraction (content hash won't match manifest)
+        extractor2 = ModuleExtractor(
+            base_package="project_a",
+            output_package="extracted",
+            output_dir=output_dir,
+            source_roots=[test_project_path],
+            quiet=True,
+        )
+        result2 = extractor2.extract(entry_points)
+        assert result2.version == "1.0.1"
+
+    def test_extract_keeps_version_on_same_content(
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+        add_test_project_to_path,
+    ):
+        entry_points = [EntryPoint.parse("project_a.appointments.models:Appointment")]
+
+        # First extraction
+        extractor = ModuleExtractor(
+            base_package="project_a",
+            output_package="extracted",
+            output_dir=output_dir,
+            source_roots=[test_project_path],
+            quiet=True,
+        )
+        result1 = extractor.extract(entry_points)
+        assert result1.version == "1.0.0"
+
+        # Second extraction, same content
+        extractor2 = ModuleExtractor(
+            base_package="project_a",
+            output_package="extracted",
+            output_dir=output_dir,
+            source_roots=[test_project_path],
+            quiet=True,
+        )
+        result2 = extractor2.extract(entry_points)
+        assert result2.version == "1.0.0"
+
+    def test_extract_manual_strategy_uses_exact(
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+        add_test_project_to_path,
+    ):
+        extractor = ModuleExtractor(
+            base_package="project_a",
+            output_package="extracted",
+            output_dir=output_dir,
+            source_roots=[test_project_path],
+            quiet=True,
+            dist_version="5.0.0",
+            version_strategy=VersionStrategy.MANUAL,
+        )
+
+        entry_points = [EntryPoint.parse("project_a.appointments.models:Appointment")]
+        result = extractor.extract(entry_points)
+        assert result.version == "5.0.0"
+
+        data = tomllib.loads(
+            (output_dir / "pyproject.toml").read_text(encoding="utf-8")
+        )
+        assert data["project"]["version"] == "5.0.0"

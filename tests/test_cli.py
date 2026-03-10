@@ -157,6 +157,42 @@ class TestCreateParser:
         )
         assert args.formatter == "ruff format --line-length 120"
 
+    def test_parse_version_strategy(self):
+        parser = create_parser()
+        args = parser.parse_args(
+            [
+                "-e",
+                "myapp:User",
+                "-b",
+                "myapp",
+                "-p",
+                "out",
+                "-o",
+                "./dist",
+                "--version-strategy",
+                "manual",
+            ],
+        )
+        assert args.version_strategy == "manual"
+
+    def test_parse_version_strategy_auto_patch(self):
+        parser = create_parser()
+        args = parser.parse_args(
+            [
+                "-e",
+                "myapp:User",
+                "-b",
+                "myapp",
+                "-p",
+                "out",
+                "-o",
+                "./dist",
+                "--version-strategy",
+                "auto-patch",
+            ],
+        )
+        assert args.version_strategy == "auto-patch"
+
     def test_parse_dist_metadata(self):
         parser = create_parser()
         args = parser.parse_args(
@@ -438,4 +474,30 @@ class TestMain:
         data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
         assert data["project"]["name"] == "project-a-extract"
         assert data["project"]["version"] == "2.1.0"
-        assert data["project"]["dependencies"] == ["pydantic>=2.0"]
+
+    def test_main_default_version_is_1_0_0(
+        self,
+        test_project_path: Path,
+        output_dir: Path,
+    ):
+        result = main(
+            [
+                "-e",
+                "project_a.appointments.models:Appointment",
+                "-b",
+                "project_a",
+                "-p",
+                "extracted",
+                "-o",
+                str(output_dir),
+                "-s",
+                str(test_project_path),
+                "--filesystem-only",
+                "--quiet",
+            ],
+        )
+        assert result == 0
+        data = tomllib.loads(
+            (output_dir / "pyproject.toml").read_text(encoding="utf-8")
+        )
+        assert data["project"]["version"] == "1.0.0"

@@ -14,6 +14,12 @@ from typing import TextIO
 from pydistill.discovery import ModuleResolver, discover_modules
 from pydistill.models import EntryPoint, ExtractionResult
 from pydistill.rewriter import rewrite_imports
+from pydistill.versioning import (
+    VersionStrategy,
+    compute_content_hash,
+    create_manifest,
+    resolve_version,
+)
 
 
 @dataclass
@@ -31,7 +37,8 @@ class ModuleExtractor:
     format: bool = False
     formatter: str = "ruff format"
     dist_name: str | None = None
-    dist_version: str = "0.1.0"
+    dist_version: str = "1.0.0"
+    version_strategy: VersionStrategy = VersionStrategy.AUTO_PATCH
     dependencies: list[str] = field(default_factory=list)
     output: TextIO = field(default_factory=lambda: sys.stdout)
 
@@ -64,6 +71,7 @@ class ModuleExtractor:
                 capture_output=True,
                 text=True,
                 check=False,
+                shell=sys.platform == "win32",
             )
             return result.returncode == 0
         except (OSError, subprocess.SubprocessError) as e:
@@ -75,10 +83,11 @@ class ModuleExtractor:
         """Serialize a string as a TOML-compatible basic string."""
         return json.dumps(value)
 
-    def _write_pyproject(self, package_names: list[str]) -> Path:
+    def _write_pyproject(self, package_names: list[str], version: str | None = None) -> Path:
         """Write packaging metadata so extracted output can be installed directly."""
         distribution_name = self.dist_name or self.output_package
         dependency_list = self.dependencies
+        effective_version = version or self.dist_version
 
         pyproject_lines = [
             "[build-system]",
@@ -87,7 +96,7 @@ class ModuleExtractor:
             "",
             "[project]",
             f"name = {self._toml_string(distribution_name)}",
-            f"version = {self._toml_string(self.dist_version)}",
+            f"version = {self._toml_string(effective_version)}",
             'requires-python = ">=3.11"',
         ]
 
@@ -183,7 +192,9 @@ class ModuleExtractor:
         # Collect all directories that need __init__.py
         init_dirs: set[Path] = set()
 
-        # Copy and rewrite each module
+        # Rewrite all modules first (buffer before writing)
+        rewritten_sources: dict[str, str] = {}
+        module_paths: dict[str, Path] = {}
         self._log("\nExtracting modules:")
         for module_name in sorted(modules):
             source_path = self.resolver.resolve(module_name)
@@ -191,10 +202,6 @@ class ModuleExtractor:
                 continue
 
             relative_path = self.get_relative_path(module_name)
-            output_path = package_dir / relative_path
-
-            # Create parent directories
-            output_path.parent.mkdir(parents=True, exist_ok=True)
 
             # Track directories needing __init__.py
             rel_parent = relative_path.parent
@@ -202,7 +209,7 @@ class ModuleExtractor:
                 init_dirs.add(rel_parent)
                 rel_parent = rel_parent.parent
 
-            # Read, rewrite, and write source
+            # Read and rewrite source
             try:
                 source = source_path.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError) as e:
@@ -210,7 +217,24 @@ class ModuleExtractor:
                 continue
 
             rewritten = rewrite_imports(source, self.base_package, self.output_package)
+            rewritten_sources[module_name] = rewritten
+            module_paths[module_name] = relative_path
 
+        # Compute content hash and resolve version
+        manifest_path = self.output_dir / ".pydistill-manifest.json"
+        content_hash = compute_content_hash(rewritten_sources)
+        resolved_version = resolve_version(
+            manifest_path, content_hash, self.dist_version, self.version_strategy
+        )
+        self._resolved_version = resolved_version
+        result.version = resolved_version
+        result.content_hash = content_hash
+
+        # Write rewritten modules to disk
+        for module_name, rewritten in rewritten_sources.items():
+            relative_path = module_paths[module_name]
+            output_path = package_dir / relative_path
+            output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_text(rewritten, encoding="utf-8")
             result.modules_extracted.append(module_name)
             result.files_written.append(output_path)
@@ -239,9 +263,19 @@ class ModuleExtractor:
             f"{self.output_package}.{'.'.join(path.parts)}"
             for path in sorted(init_dirs)
         )
-        pyproject_path = self._write_pyproject(package_names)
+        pyproject_path = self._write_pyproject(package_names, version=resolved_version)
         result.files_written.append(pyproject_path)
         self._log(f"  Created: {pyproject_path}")
+
+        # Write manifest
+        manifest = create_manifest(
+            content_hash=content_hash,
+            version=resolved_version,
+            entry_points=[str(ep) for ep in entry_points],
+            modules=sorted(rewritten_sources.keys()),
+        )
+        manifest.save(manifest_path)
+        self._log(f"  Created: {manifest_path}")
 
         # Format files if requested
         if self.format:

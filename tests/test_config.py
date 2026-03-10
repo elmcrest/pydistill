@@ -6,6 +6,27 @@ from pydistill.config import PyDistillConfig
 
 
 class TestPyDistillConfig:
+    def test_default_dist_version_is_1_0_0(self):
+        config = PyDistillConfig()
+        assert config.dist_version == "1.0.0"
+
+    def test_version_strategy_default_is_auto_patch(self):
+        config = PyDistillConfig()
+        assert config.version_strategy == "auto-patch"
+
+    def test_version_strategy_from_toml(self, tmp_path: Path):
+        config_file = tmp_path / "pydistill.toml"
+        config_file.write_text("""
+[pydistill]
+entries = ["myapp.models:User"]
+base_package = "myapp"
+output_package = "extracted"
+output_dir = "./dist"
+version_strategy = "manual"
+""")
+        config = PyDistillConfig.load(config_file)
+        assert config.version_strategy == "manual"
+
     def test_from_dict(self):
         data = {
             "pydistill": {

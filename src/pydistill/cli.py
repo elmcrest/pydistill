@@ -11,6 +11,7 @@ from pathlib import Path
 from pydistill.config import PyDistillConfig
 from pydistill.extractor import ModuleExtractor
 from pydistill.models import EntryPoint
+from pydistill.versioning import VersionStrategy
 
 
 def get_cli_version() -> str:
@@ -155,7 +156,15 @@ Configuration file (pydistill.toml):
         "--dist-version",
         metavar="VERSION",
         help="Distribution version to write in generated pyproject.toml "
-        "(default: 0.1.0)",
+        "(default: 1.0.0)",
+    )
+
+    parser.add_argument(
+        "--version-strategy",
+        choices=["auto-patch", "manual"],
+        metavar="STRATEGY",
+        help="Version strategy: 'auto-patch' (default) bumps patch on content change, "
+        "'manual' uses --dist-version as-is",
     )
 
     parser.add_argument(
@@ -198,6 +207,7 @@ def load_config(args: argparse.Namespace) -> PyDistillConfig:
             formatter=args.formatter,
             dist_name=args.dist_name,
             dist_version=args.dist_version,
+            version_strategy=args.version_strategy,
             dependencies=args.dependencies if args.dependencies is not None else None,
         )
     else:
@@ -212,7 +222,8 @@ def load_config(args: argparse.Namespace) -> PyDistillConfig:
             format=format_enabled,
             formatter=args.formatter or "ruff format",
             dist_name=args.dist_name,
-            dist_version=args.dist_version or "0.1.0",
+            dist_version=args.dist_version or "1.0.0",
+            version_strategy=args.version_strategy or "auto-patch",
             dependencies=args.dependencies or [],
         )
 
@@ -299,6 +310,7 @@ def main(argv: list[str] | None = None) -> int:
         formatter=config.formatter,
         dist_name=config.dist_name,
         dist_version=config.dist_version,
+        version_strategy=VersionStrategy(config.version_strategy),
         dependencies=config.dependencies,
     )
 
