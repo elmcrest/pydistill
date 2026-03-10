@@ -83,7 +83,9 @@ class ModuleExtractor:
         """Serialize a string as a TOML-compatible basic string."""
         return json.dumps(value)
 
-    def _write_pyproject(self, package_names: list[str], version: str | None = None) -> Path:
+    def _write_pyproject(
+        self, package_names: list[str], version: str | None = None
+    ) -> Path:
         """Write packaging metadata so extracted output can be installed directly."""
         distribution_name = self.dist_name or self.output_package
         dependency_list = self.dependencies
